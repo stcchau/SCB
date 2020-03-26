@@ -1,12 +1,18 @@
 import random
 from Parser import Parser
 
+'''
+SCB capabilities: 
+- semantic understanding only
+- no contractions allowed
+- some hierarchy not established
+- cannot determine parts of speech
+- predict verbs (not always correct)
+- believes everything you tell it
+'''
 class SCB:
     def __init__(self, lexicon):
-        self.lexicon = lexicon
-        self.parser = Parser(lexicon)
         self.q_word = ['who', 'what', 'when', 'where' 'why', 'how']
-        self.ends = ['.', '!', '?']
 
     def sentence_type(self, words):  # determines sentence type
         if words[0] in self.q_word:
@@ -38,10 +44,10 @@ class SCB:
 
     def read(self, sentence):
         tokens = self.parser.tokenize(sentence)
-        if len(tokens) <= 2:
+        if len(tokens) <= 2:  # ignore simple sentences
             return
-        sent_type, q_type = self.sentence_type(tokens)
 
+        sent_type, q_type = self.sentence_type(tokens)
         subjects, predicate = self.parser.divide(tokens)
 
         if sent_type == 'question':
@@ -52,3 +58,10 @@ class SCB:
                 self.lexicon[subject][predicate] = {}
                 if p[0] != 'BE':
                     self.lexicon[predicate][subject] = {}
+                else:
+                    if p[-1] in self.lexicon:
+                        self.lexicon[subject].update(self.lexicon[p[-1]])
+                        for key in list((self.lexicon[p[-1]]).keys()):
+                            if key not in self.lexicon:
+                                self.lexicon[key] = {}
+                            self.lexicon[key][subject] = {}

@@ -1,19 +1,17 @@
-from SCB import SCB
+from Parser import Parser
 
 lexicon = {}
 
-scb = SCB(lexicon)
+p = Parser()
 
 sentence = input()
-while sentence != 'abc':
+while sentence != 'bye':
     if sentence == '1':
-        print(scb.lexicon)
+        print(lexicon)
     elif sentence == '2':
-        print(scb.parser.verb_prob)
-    elif sentence == '3':
         data = open('data.txt').read().split('\n')
         for line in data:
-            scb.read(line)
+            print(p.S_tree(p.tokenize(line, lexicon), lexicon))
     else:
-        scb.read(sentence)
+        print(p.S_tree(p.tokenize(sentence, lexicon), lexicon))
     sentence = input()
