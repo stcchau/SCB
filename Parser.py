@@ -36,7 +36,7 @@ class Parser:  # simplifies sentence string into array of tokens
 
     def update_scores(self, tokens, lexicon):
         for token in tokens:
-            lexicon[token[0]][token[1]] -= 1
+            lexicon[token[0]][token[1]] += 1
             lexicon[token[0]]['~'] += 1
 
     def update_lexicon(self, tokens, lexicon):  # adds new information into the lexicon
@@ -120,16 +120,16 @@ class Parser:  # simplifies sentence string into array of tokens
                             pass
                         elif POS == 'preposition' and (phrase[-1][1] != 'noun'):  # prepositions only come after nouns
                             pass
-                        else:
+                        elif len(phrase) < tokens_length:
                             tree.append(phrase + [(tokens[i], POS)])
-                    elif POS == 'noun' or POS == 'adjective':
+                            if len(tree[-1]) == tokens_length:
+                                score = 0
+                                phrase = tree.pop(-1)
+                                for tup in phrase:
+                                    score += lexicon[tup[0]][tup[1]] / lexicon[tup[0]]['~']
+                                tree.append((score, phrase))
+                    elif POS == 'noun' or POS == 'adjective' or POS == 'adverb':
                         tree.append(phrase + [(tokens[i], POS)])
-                if len(tree[-1]) == tokens_length:
-                    score = 0
-                    phrase = tree.pop(-1)
-                    for tup in phrase:
-                        score += lexicon[tup[0]][tup[1]] / lexicon[tup[0]]['~']
-                    tree.append((score, phrase))
 
         best_phrase_set = tree[0]
         for phrase_set in tree:
