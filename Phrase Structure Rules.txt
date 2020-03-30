@@ -7,6 +7,7 @@ N = noun
 TV = transitive verb
 NV = non-transitive verb
 LV = linking verb
+HV = helping verb
 Adj = adjective
 Det = determiner
 C = conjunction
@@ -17,7 +18,7 @@ INT = interjection
 
 S -> S C (S | VP)
 S -> NP VP
-NP -> Det [ND] N [PP] NP VP [PP]
+NP -> Det [ND] N [PP] NP VP
 NP -> [Det] [ND] N [PP]
 ND -> {Adv} {Adj} Adj
 VP -> {Adv} (TV NP | NV) [PP]

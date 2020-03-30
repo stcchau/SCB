@@ -11,7 +11,7 @@ while sentence != 'bye':
     elif sentence == '2':
         data = open('data.txt').read().split('\n')
         for line in data:
-            print(p.S_tree(p.tokenize(line, lexicon), lexicon))
+            print(p.S_tree(p.translate(line, lexicon), lexicon))
     else:
-        print(p.S_tree(p.tokenize(sentence, lexicon), lexicon))
+        print(p.S_tree(p.translate(sentence, lexicon), lexicon))
     sentence = input()
