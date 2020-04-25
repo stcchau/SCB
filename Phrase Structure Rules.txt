@@ -29,7 +29,7 @@ PP -> P NP
 
 ND -> {Adv} {Adj} Adj
 
-VP -> {Adv} [HV] (AP | LP)
+VP -> [{Adv} HV] (AP | LP)
 
 LP -> {Adv} LV (NP | ND)
 
