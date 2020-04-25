@@ -1,27 +1,38 @@
-S = sentence
-NP = noun phrase
-ND = noun description
-VP = verb phrase
-PP = prepositional phrase
-N = noun
-TV = transitive verb
-NV = non-transitive verb
-LV = linking verb
-HV = helping verb
 Adj = adjective
-Det = determiner
-C = conjunction
 Adv = adverb
+AP = action verb phrase
+C = conjunction
+Det = determiner
+HV = helping verb
+INT = interjection
+LP = linking verb phrase
+LV = linking verb
+N = noun
+ND = noun description
+NP = noun phrase
+NV = non-transitive verb
 P = preposition
 PN = pronoun
-INT = interjection
+PP = prepositional phrase
+S = sentence
+TV = transitive verb
+VP = verb phrase
+
 
 S -> S C (S | VP)
 S -> NP VP
+
 NP -> Det [ND] N [PP] NP VP
 NP -> [Det] [ND] N [PP]
-ND -> {Adv} {Adj} Adj
-VP -> {Adv} (TV NP | NV) [PP]
-VP -> (TV NP | NV) [PP] {Adv}
-VP -> (TV NP | NV) {Adv} [PP]
+
 PP -> P NP
+
+ND -> {Adv} {Adj} Adj
+
+VP -> {Adv} [HV] (AP | LP)
+
+LP -> {Adv} LV (NP | ND)
+
+AP -> {Adv} (TV NP | NV [PP])
+AP -> (TV NP | NV [PP]) {Adv}
+AP -> NV {Adv} [PP]

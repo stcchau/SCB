@@ -13,28 +13,6 @@ class Parser:  # simplifies sentence string into array of tokens
         self.q_word = ['who', 'what', 'when', 'where' 'why', 'how']
         self.ends = '.?!'
 
-    '''
-    def normal_distr(self, sigma, mu, x):
-        return (-(x - mu) ** 2) / ((2 * sigma) ** 2) - math.log(sigma * math.sqrt(2 * math.pi))
-
-    
-    def update_verb_probs(self, words):
-        sigma = math.sqrt(len(words) / 2)
-        mu = (2 + (sigma - 1)) * 0.75
-        for i in range(len(words)):
-            if words[i] == 'BE':
-                mu = i
-                break
-        delta = (mu * (8 / 3)) / (len(words) - 1)
-        for i in range(len(words)):
-            if words[i] not in self.verb_prob:
-                self.verb_prob[words[i]] = [self.normal_distr(sigma, mu, delta * i), 1]
-            else:
-                self.verb_prob[words[i]][0] = (self.verb_prob[words[i]][0] * self.verb_prob[words[i]][
-                    1] + self.normal_distr(sigma, mu, delta * i)) / (self.verb_prob[words[i]][1] + 1)
-                self.verb_prob[words[i]][1] += 1
-    '''
-
     def update_scores(self, tokens, lexicon):
         if type(tokens[0]) == tuple:
             for token in tokens:
@@ -58,16 +36,16 @@ class Parser:  # simplifies sentence string into array of tokens
 
         i = 0
         while i < len(words):  # conjugates to-be verbs and switches point of view
-            if words[i] == 'you':
+            if words[i] in self.to_be:
+                words[i] = 'BE'
+            elif words[i] == 'you':
                 words[i] = 'i'
             elif words[i] == 'i':
                 words[i] = 'you'
-            elif words[i] in self.to_be:
-                words[i] = 'BE'
-            elif words[i] == 'my':
-                words[i] = 'your'
             elif words[i] == 'your':
                 words[i] = 'my'
+            elif words[i] == 'my':
+                words[i] = 'your'
             i += 1
 
         self.update_lexicon(words, lexicon)
@@ -91,9 +69,11 @@ class Parser:  # simplifies sentence string into array of tokens
             if sentence_set[0] > best_sentence_set[0]:
                 best_sentence_set = sentence_set
 
-        self.update_scores(best_sentence_set[1], lexicon)
+        best_sentence = best_sentence_set[1]
 
-        return best_sentence_set[1]
+        self.update_scores(best_sentence, lexicon)
+
+        return best_sentence
 
     def NP_tree(self, words, lexicon):
 
@@ -104,7 +84,6 @@ class Parser:  # simplifies sentence string into array of tokens
             phrase_set = score, phrase
             return phrase_set
 
-        words_length = len(words)
         tree = [(False, 0, [])]
 
         for i in range(len(words)):
@@ -117,7 +96,7 @@ class Parser:  # simplifies sentence string into array of tokens
                     phrase = phrase_set[2]
                     for POS in ['determiner', 'noun', 'preposition', 'adverb', 'adjective']:
                         if len(phrase) > 0:
-                            if POS != 'noun' and len(phrase) == words_length - 1:  # only nouns are allowed at the end
+                            if POS != 'noun' and len(phrase) == len(words) - 1:  # only nouns are allowed at the end
                                 pass
                             elif (POS == 'noun' or POS == 'adjective' or POS == 'adverb') and phrase[-1][1] == 'noun':  # nouns are never followed by another noun or adjective
                                 pass
@@ -125,11 +104,11 @@ class Parser:  # simplifies sentence string into array of tokens
                                 pass
                             elif POS == 'adverb' and phrase[-1][1] == 'adjective':  # adverbs cannot follow adjectives
                                 pass
-                            elif POS == 'preposition' and (phrase[-1][1] != 'noun' or words_length - len(phrase) < 2):  # prepositions only come after nouns
+                            elif POS == 'preposition' and (phrase[-1][1] != 'noun' or len(words) - len(phrase) < 2):  # prepositions only come after nouns
                                 pass
-                            elif POS == 'determiner' and (words[i] not in self.dets or len(phrase) != 0):
+                            elif POS == 'determiner' and (words[i] not in self.dets or len(phrase) != 0):  # determiners only allowed in beginning
                                 pass
-                            elif len(phrase) < words_length:
+                            elif len(phrase) < len(words):
                                 if POS == 'preposition':
                                     pp = self.PP_tree(words[i:], lexicon)
                                     new_score = score + pp[0]
@@ -139,10 +118,10 @@ class Parser:  # simplifies sentence string into array of tokens
                                     token = words[i], POS
                                     new_score = score + lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
                                     new_phrase = phrase + [token]
-                                    tree.append((False, new_score, new_phrase))
-                                    if len(new_phrase) == words_length:
-                                        phrase_set = tree.pop(-1)
-                                        tree.append((True, phrase_set[1], phrase_set[2]))
+                                    if len(new_phrase) == len(words):
+                                        tree.append((True, new_score, new_phrase))
+                                    else:
+                                        tree.append((False, new_score, new_phrase))
                         elif POS == 'noun' or POS == 'adjective' or POS == 'adverb' or (POS == 'determiner' and words[i] in self.dets):
                             token = words[i], POS
                             new_score = score + lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
@@ -198,99 +177,3 @@ class Parser:  # simplifies sentence string into array of tokens
         new_phrase = [phrase, np[1]]
         phrase_set = (new_score, new_phrase)
         return phrase_set
-
-    '''
-    def sentence(self, tokens, lexicon):
-        string = '<S>' + '\n'
-        parsable = False
-        verb = 0
-        for i in range(len(tokens)):
-            if 'verb' in lexicon[tokens[i]] or tokens[i] == 'BE':
-                verb = i
-            elif (tokens[i] in self.dets or 'adjective' in lexicon[tokens[i]] or 'noun' in lexicon[tokens[i]]) and (i >= 2 and 'noun' in lexicon[tokens[i - 2]]):
-                verb = i - 1
-        if verb > 0:
-            np = self.noun_phrase(tokens[:verb], lexicon, 1)
-            vp = self.verb_phrase(tokens[verb:], lexicon, 1)
-            if np[0] and vp[0]:
-                string += np[1]
-                string += vp[1]
-                parsable = True
-            string += '</S>'
-        if not parsable:
-            string = 'i cannot understand you'
-        return string
-    
-    def noun_phrase(self, tokens, lexicon, indents):
-        correct = True
-        string = indents * '\t' + '<NP>' + '\n'
-        i = 0
-        if tokens[0] in self.dets:
-            string += (indents + 1) * '\t' + 'Determiner:' + tokens.pop(0) + '\n'
-        while len(tokens) > 0 and i < len(tokens):
-            if ('adjective' in lexicon[tokens[i]] or 'noun' in lexicon[tokens[i]]) and i > 0:
-                string += self.noun_description(tokens[:i], lexicon, indents)
-                for j in range(len(tokens[:i])):
-                    tokens.pop(0)
-                    i -= 1
-            elif 'noun' in lexicon[tokens[i]]:
-                string += (indents + 1) * '\t' + 'Noun:' + tokens.pop(i) + '\n'
-            elif len(tokens) == 1:
-                lexicon[tokens[i]]['noun'] = {}
-                print('learned noun:', tokens[i])
-                tokens.pop(0)
-            else:
-                i += 1
-        if len(tokens) > 0:
-            correct = False
-        string += indents * '\t' + '</NP>' + '\n'
-        return correct, string
-    
-    def noun_description(self, tokens, lexicon, indents):
-        string = ''
-        lexicon[tokens[-1]]['adjective'] = {}
-        print('learned adjective:', tokens[-1])
-        if len(tokens) > 1:
-            string += self.noun_description(tokens[:-1], lexicon, indents)
-        string += (indents + 1) * '\t' + 'Adjective:' + tokens[-1] + '\n'
-        return string
-
-    def verb_phrase(self, tokens, lexicon, indents):
-        correct = True
-        string = indents * '\t' + '<VP>' + '\n'
-        i = 0
-        noun_found = False
-        verb_found = False
-        while len(tokens) > 0 and i < len(tokens):
-            if tokens[i] in self.dets or 'noun' in lexicon[tokens[i]] or 'adjective' in lexicon[tokens[i]]:
-                np = self.noun_phrase(tokens[i:], lexicon, indents + 1)
-                if np[0]:
-                    string += np[1]
-                    noun_found = True
-                for j in range(len(tokens[i:])):
-                    tokens.pop(i)
-                i = 0
-            elif 'verb' in lexicon[tokens[i]]:
-                string += (indents + 1) * '\t' + 'Verb:' + tokens.pop(i) + '\n'
-                verb_found = True
-            elif len(tokens) == 1:
-                if noun_found and not verb_found:
-                    lexicon[tokens[i]]['verb'] = {}
-                    print('learned verb:', tokens[i])
-                elif verb_found and not noun_found:
-                    lexicon[tokens[i]]['noun'] = {}
-                    print('learned noun:', tokens[i])
-                else:
-                    lexicon[tokens[i]]['adjective'] = {}
-                    print('learned adjective:', tokens[i])
-                tokens.pop(0)
-            else:
-                i += 1
-        if len(tokens) > 0:
-            correct = False
-        string += indents * '\t' + '</VP>' + '\n'
-        return correct, string
-
-    def PP(self, tokens, lexicon, anchors, indents):
-        pass
-    '''
