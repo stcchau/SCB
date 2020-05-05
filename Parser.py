@@ -1,6 +1,7 @@
 import math
 from queue import PriorityQueue as pq
 
+
 class Parser:  # simplifies sentence string into array of tokens
     def __init__(self):
         self.poss_prons = ['mine', 'yours', 'his', 'hers', 'ours', 'yours', 'theirs']
@@ -9,23 +10,58 @@ class Parser:  # simplifies sentence string into array of tokens
         self.dems = ['this', 'that', 'these', 'those']
         self.dets = self.arts + self.poss_adjs + self.dems
         self.modals = ['can', 'may', 'must', 'shall', 'will', 'could', 'might', 'ought to', 'should', 'would']
-        self.to_be = ['am', 'are', 'is', 'was', 'were']
+        self.to_be = ['am', 'are', 'is', 'was', 'were', 'being', 'been', 'be']
+        self.help = ['BE'] + self.modals + ['have', 'has', 'had', 'do', 'does', 'did']
         self.q_word = ['who', 'what', 'when', 'where' 'why', 'how']
         self.ends = '.?!'
 
-    def update_scores(self, tokens, lexicon):
-        if type(tokens[0]) == tuple:
-            for token in tokens:
-                lexicon[token[0]][token[1]] += 1
-                lexicon[token[0]]['~'] += 1
-        else:
-            for token in tokens:
-                self.update_scores(token, lexicon)
+    def update_scores(self, tree, lexicon):
+        for branch in tree:
+            if type(branch) == tuple:
+                lexicon[branch[0]][branch[1]] += 1
+                lexicon[branch[0]]['~'] += 1
+            else:
+                self.update_scores(branch, lexicon)
+
+    def display(self, tree):
+        for branch in tree:
+            if type(branch) == tuple:
+                print(branch, end=' ')
+            else:
+                self.display(branch)
 
     def update_lexicon(self, words, lexicon):  # adds new information into the lexicon
         for word in words:
             if word not in lexicon:
-                lexicon[word] = {'determiner': 0, 'noun': 0, 'adverb': 0, 'adjective': 0, 'verb': 0, 'preposition': 0, '~': 1}
+                if word[-3:] == 'ing':  # checks if base verb exists
+                    if word[:-3] in lexicon:
+                        lexicon[word] = lexicon[word[:-3]]
+                        continue
+                    elif word[:-3] + 'e' in lexicon:
+                        lexicon[word] = lexicon[word[:-3] + 'e']
+                        continue
+                    elif word[-4:] == 'ying' and word[:-4] + 'ie' in lexicon:
+                        lexicon[word] = lexicon[word[:-4] + 'ie']
+                        continue
+                    elif word[:-4] in lexicon:
+                        lexicon[word] = lexicon[word[:-4]]
+                        continue
+                    else:
+                        lexicon[word] = {'Det': 0, 'N': 0, 'Adv': 0, 'Adj': 0, 'V': 1, 'HV': 0, 'P': 0, '~': 2}
+                        continue
+                elif word + 'ing' in lexicon:
+                    lexicon[word] = lexicon[word + 'ing']
+                    continue
+                elif word + word[-1] + 'ing' in lexicon:
+                    lexicon[word] = lexicon[word + word[-1] + 'ing']
+                    continue
+                elif word[:-2] == 'ie' and word[-2:] + 'ying' in lexicon:
+                    lexicon[word] = lexicon[word[-2:] + 'ying']
+                    continue
+                if word in self.modals:
+                    lexicon[word] = {'Det': 0, 'N': 0, 'Adv': 0, 'Adj': 0, 'V': 0, 'HV': 1, 'P': 0, '~': 2}
+                else:
+                    lexicon[word] = {'Det': 0, 'N': 0, 'Adv': 0, 'Adj': 0, 'V': 0, 'HV': 0, 'P': 0, '~': 1}
 
     def translate(self, sentence, lexicon):  # simplifies sentence into word array
 
@@ -52,7 +88,7 @@ class Parser:  # simplifies sentence string into array of tokens
 
         return words
 
-    def S_tree(self, words, lexicon):
+    def S_tree(self, words, lexicon):  # sentence
 
         tree = []
 
@@ -75,70 +111,10 @@ class Parser:  # simplifies sentence string into array of tokens
 
         return best_sentence
 
-    def NP_tree(self, words, lexicon):
+    def NP_tree(self, words, lexicon):  # NP -> [Det] [ND] N [PP]
 
         if len(words) == 1:
-            token = words[0], 'noun'
-            score = lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
-            phrase = [token]
-            phrase_set = score, phrase
-            return phrase_set
-
-        tree = [(False, 0, [])]
-
-        for i in range(len(words)):
-            for j in range(len(tree)):
-                phrase_set = tree.pop(0)
-                if phrase_set[0]:
-                    tree.append(phrase_set)
-                else:
-                    score = phrase_set[1]
-                    phrase = phrase_set[2]
-                    for POS in ['determiner', 'noun', 'preposition', 'adverb', 'adjective']:
-                        if len(phrase) > 0:
-                            if POS != 'noun' and len(phrase) == len(words) - 1:  # only nouns are allowed at the end
-                                pass
-                            elif (POS == 'noun' or POS == 'adjective' or POS == 'adverb') and phrase[-1][1] == 'noun':  # nouns are never followed by another noun or adjective
-                                pass
-                            elif POS == 'noun' and phrase[-1][1] == 'adverb':  # nouns cannot follow adverbs
-                                pass
-                            elif POS == 'adverb' and phrase[-1][1] == 'adjective':  # adverbs cannot follow adjectives
-                                pass
-                            elif POS == 'preposition' and (phrase[-1][1] != 'noun' or len(words) - len(phrase) < 2):  # prepositions only come after nouns
-                                pass
-                            elif POS == 'determiner' and (words[i] not in self.dets or len(phrase) != 0):  # determiners only allowed in beginning
-                                pass
-                            elif len(phrase) < len(words):
-                                if POS == 'preposition':
-                                    pp = self.PP_tree(words[i:], lexicon)
-                                    new_score = score + pp[0]
-                                    new_phrase = [phrase, pp[1]]
-                                    tree.append((True, new_score, new_phrase))
-                                else:
-                                    token = words[i], POS
-                                    new_score = score + lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
-                                    new_phrase = phrase + [token]
-                                    if len(new_phrase) == len(words):
-                                        tree.append((True, new_score, new_phrase))
-                                    else:
-                                        tree.append((False, new_score, new_phrase))
-                        elif POS == 'noun' or POS == 'adjective' or POS == 'adverb' or (POS == 'determiner' and words[i] in self.dets):
-                            token = words[i], POS
-                            new_score = score + lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
-                            new_phrase = phrase + [token]
-                            tree.append((False, new_score, new_phrase))
-
-        best_phrase_set = tree[0]
-        for phrase_set in tree:
-            if phrase_set[1] > best_phrase_set[1]:
-                best_phrase_set = phrase_set
-
-        return best_phrase_set[1:]
-
-    def VP_tree(self, words, lexicon):
-
-        if len(words) == 1:
-            token = words[0], 'verb'
+            token = words[0], 'N'
             score = lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
             phrase = [token]
             phrase_set = score, phrase
@@ -146,20 +122,38 @@ class Parser:  # simplifies sentence string into array of tokens
 
         tree = []
 
-        for i in range(1, len(words) + 1):
-            phrase = words[:i]
-            phrase = [(phrase[j], 'adverb') for j in range(len(phrase) - 1)] + [(phrase[-1], 'verb')]
+        for i in range(len(words)):
+
+            if i == len(words) - 2:
+                continue
+
             score = 0
-            for token in phrase:
+            phrase = []
+
+            is_det = False
+            if words[0] in self.dets:
+                if i == 0:
+                    continue
+                token = words[0], 'Det'
                 score += lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
-            if i == len(words):
-                new_score = score
-                new_phrase = phrase
-            else:
-                np = self.NP_tree(words[i:], lexicon)
-                new_score = score + np[0]
-                new_phrase = [phrase, np[1]]
-            tree.append((new_score, new_phrase))
+                phrase.append(token)
+                is_det = True
+
+            if len(words[1 if is_det else 0:i]) > 0:
+                nd = self.ND_tree(words[1 if is_det else 0:i], lexicon)
+                score += nd[0]
+                phrase.append(nd[1])
+
+            token = words[i], 'N'
+            score += lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
+            phrase.append(token)
+
+            if len(words[i + 1:]) > 0:
+                pp = self.PP_tree(words[i + 1:], lexicon)
+                score += pp[0]
+                phrase.append(pp[1])
+
+            tree.append((score, phrase))
 
         best_phrase_set = tree[0]
         for phrase_set in tree:
@@ -168,12 +162,138 @@ class Parser:  # simplifies sentence string into array of tokens
 
         return best_phrase_set
 
-    def PP_tree(self, words, lexicon):
-        token = words[0], 'preposition'
-        score = lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
-        phrase = [token]
-        np = self.NP_tree(words[1:], lexicon)
-        new_score = score + np[0]
-        new_phrase = [phrase, np[1]]
-        phrase_set = (new_score, new_phrase)
-        return phrase_set
+    def ND_tree(self, words, lexicon):  # ND -> {Adv} {Adj} Adj
+
+        if len(words) == 1:
+            token = words[0], 'Adj'
+            score = lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
+            phrase = [token]
+            phrase_set = score, phrase
+            return phrase_set
+
+        tree = []
+
+        for i in range(len(words)):
+            score = 0
+            phrase = [(words[j], 'Adv') for j in range(i)] + [(words[k], 'Adj') for k in range(i, len(words))]
+            for token in phrase:
+                score += lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
+            tree.append((score, phrase))
+
+        best_phrase_set = tree[0]
+        for phrase_set in tree:
+            if phrase_set[0] > best_phrase_set[0]:
+                best_phrase_set = phrase_set
+
+        return best_phrase_set
+
+    def VP_tree(self, words, lexicon):  # VP -> [{Adv} HV] VPH
+
+        if len(words) == 1:
+            token = words[0], 'V'
+            score = lexicon[token[0]]['V'] / lexicon[token[0]]['~']
+            phrase = [token]
+            phrase_set = score, phrase
+            return phrase_set
+
+        tree = []
+
+        for i in range(len(words)):
+            if words[i] in self.modals + self.dets:  # modals and determiners cannot start a verb phrase helper
+                continue
+            score = 0
+            phrase = []
+            if i > 0:
+                if words[i - 1] not in self.help:
+                    continue
+                phrase = [(words[j], 'Adv') for j in range(i - 1)] + [(words[i - 1], 'HV')]
+                for token in phrase:
+                    if token[1] == 'HV':
+                        score += (lexicon[token[0]]['V'] / lexicon[token[0]]['~'] + lexicon[token[0]][token[1]] / lexicon[token[0]]['~']) / 2
+                    else:
+                        score += lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
+
+            vph = self.VPH_tree(words[i:], lexicon)
+            score += vph[0]
+            phrase = vph[1] if len(phrase) == 0 else [phrase, vph[1]]
+            tree.append((score, phrase))
+
+        best_phrase_set = tree[0]
+        for phrase_set in tree:
+            if phrase_set[0] > best_phrase_set[0]:
+                best_phrase_set = phrase_set
+
+        return best_phrase_set
+
+    def VPH_tree(self, words, lexicon):  # VPH -> {Adv} V [NP | ND [PP] | PP] {Adv}
+
+        if len(words) == 1:
+            token = words[0], 'V'
+            score = lexicon[token[0]]['V'] / lexicon[token[0]]['~']
+            phrase = [token]
+            phrase_set = score, phrase
+            return phrase_set
+
+        tree = []
+
+        for i in range(1, len(words)):
+            score = 0
+            phrase = [(words[j], 'Adv') for j in range(i - 1)] + [(words[i - 1], 'V')]
+            for token in phrase:
+                score += lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
+
+            np = self.NP_tree(words[i:], lexicon)
+            new_score = score + np[0]
+            new_phrase = [phrase, np[1]]
+            tree.append((new_score, new_phrase))
+
+            modifier = words[i:]
+            if len(modifier) == 1:
+                nd = self.ND_tree(modifier, lexicon)
+                new_score = score + nd[0]
+                new_phrase = [phrase, nd[1]]
+                tree.append((new_score, new_phrase))
+            else:
+                for j in range(1, len(modifier) + 1):
+                    if j > len(modifier) - 2:
+                        continue
+                    nd = self.ND_tree(modifier[:j], lexicon)
+                    pp = self.PP_tree(modifier[j:], lexicon)
+                    new_score = score + nd[0] + pp[0]
+                    new_phrase = [phrase, nd[1], pp[1]]
+                    tree.append((new_score, new_phrase))
+                pp = self.PP_tree(modifier, lexicon)
+                new_score = score + pp[0]
+                new_phrase = [phrase, pp[1]]
+                tree.append((new_score, new_phrase))
+
+        best_phrase_set = tree[0]
+        for phrase_set in tree:
+            if phrase_set[0] > best_phrase_set[0]:
+                best_phrase_set = phrase_set
+
+        return best_phrase_set
+
+    def PP_tree(self, words, lexicon):  # PP -> {Adv} P NP
+        if len(words) == 1:
+            raise ValueError('prepositional phrase needs more than one word')
+
+        tree = []
+
+        for i in range(1, len(words)):
+            score = 0
+            phrase = [(words[j], 'Adv') for j in range(i - 1)] + [(words[i - 1], 'P')]
+            for token in phrase:
+                score += lexicon[token[0]][token[1]] / lexicon[token[0]]['~']
+
+            np = self.NP_tree(words[i:], lexicon)
+            score += np[0]
+            phrase.append(np[1])
+            tree.append((score, phrase))
+
+        best_phrase_set = tree[0]
+        for phrase_set in tree:
+            if phrase_set[0] > best_phrase_set[0]:
+                best_phrase_set = phrase_set
+
+        return best_phrase_set

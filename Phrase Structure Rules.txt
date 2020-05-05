@@ -17,22 +17,28 @@ PP = prepositional phrase
 S = sentence
 TV = transitive verb
 VP = verb phrase
-
+VPH = verb phrase helper function
 
 S -> S C (S | VP)
 S -> NP VP
 
-NP -> Det [ND] N [PP] NP VP
+NP -> Det [ND] N [PP] NP TV
 NP -> [Det] [ND] N [PP]
 
-PP -> P NP
+PP -> {Adv} P NP
+"very early in the morning"
 
 ND -> {Adv} {Adj} Adj
 
-VP -> [{Adv} HV] (AP | LP)
+VP -> [{Adv} HV] VPH
 
-LP -> {Adv} LV (NP | ND)
+VPH -> {Adv} V [NP | ND [PP] | PP] {Adv}
 
-AP -> {Adv} (TV NP | NV [PP])
-AP -> (TV NP | NV [PP]) {Adv}
-AP -> NV {Adv} [PP]
+LP -> {Adv} LV (NP | ND [PP] | PP)
+"oddly looks familiar without makeup"
+
+AP -> {Adv} (TV NP | NV [PP]) {Adv}
+"quietly went for a swim early in the morning"
+
+AP -> {Adv} NV [PP]
+"quickly walked along the sidewalk"

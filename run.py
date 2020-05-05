@@ -7,11 +7,14 @@ p = Parser()
 sentence = input()
 while sentence != 'bye':
     if sentence == '1':
-        print(lexicon)
+        print('Enter word:')
+        print(lexicon[input()])
     elif sentence == '2':
         data = open('data.txt').read().split('\n')
         for line in data:
-            print(p.S_tree(p.translate(line, lexicon), lexicon))
+            p.display(p.S_tree(p.translate(line, lexicon), lexicon))
+            print()
     else:
-        print(p.S_tree(p.translate(sentence, lexicon), lexicon))
+        p.display(p.S_tree(p.translate(sentence, lexicon), lexicon))
+        print()
     sentence = input()
