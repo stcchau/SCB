@@ -14,7 +14,11 @@ while sentence != 'bye':
         for line in data:
             p.display(p.S_tree(p.translate(line, lexicon), lexicon))
             print()
+            #print(p.S_tree(p.translate(line, lexicon), lexicon))
+            #print()
     else:
         p.display(p.S_tree(p.translate(sentence, lexicon), lexicon))
         print()
+        #print(p.S_tree(p.translate(sentence, lexicon), lexicon))
+        #print()
     sentence = input()

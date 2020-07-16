@@ -5,25 +5,23 @@ C = conjunction
 Det = determiner
 HV = helping verb
 INT = interjection
-LP = linking verb phrase
-LV = linking verb
 N = noun
 ND = noun description
 NP = noun phrase
-NV = non-transitive verb
 P = preposition
 PN = pronoun
 PP = prepositional phrase
 S = sentence
-TV = transitive verb
+V = verb
 VP = verb phrase
-VPH = verb phrase helper function
+VPH = verb phrase helper
 
 S -> S C (S | VP)
 S -> NP VP
 
-NP -> Det [ND] N [PP] NP TV
+NP -> Det [ND] N [PP] NP V
 NP -> [Det] [ND] N [PP]
+"that big pimple under my nose"
 
 PP -> {Adv} P NP
 "very early in the morning"
@@ -33,12 +31,6 @@ ND -> {Adv} {Adj} Adj
 VP -> [{Adv} HV] VPH
 
 VPH -> {Adv} V [NP | ND [PP] | PP] {Adv}
-
-LP -> {Adv} LV (NP | ND [PP] | PP)
+"reluctantly planning the party tomorrow"
 "oddly looks familiar without makeup"
-
-AP -> {Adv} (TV NP | NV [PP]) {Adv}
-"quietly went for a swim early in the morning"
-
-AP -> {Adv} NV [PP]
-"quickly walked along the sidewalk"
+"happily went for a walk early in the morning"
